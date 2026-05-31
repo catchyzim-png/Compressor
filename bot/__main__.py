@@ -14,10 +14,29 @@
 # <https://github.com/1Danish-00/CompressorQueue/blob/main/License> .
 
 
+import os
+from aiohttp import web
 from . import *
 from .devtools import *
 
 LOGS.info("Starting...")
+
+
+# Dummy Web Server Handler to satisfy Render's port binding requirement
+async def handle(request):
+    return web.Response(text="Bot is running smoothly!")
+
+
+async def start_web_server():
+    app = web.Application()
+    app.router.add_get("/", handle)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    # Render automatically assigns a PORT environment variable
+    port = int(os.environ.get("PORT", 8080))
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+    print(f"Web server started on port {port}")
 
 
 ######## Connect ########
@@ -217,6 +236,8 @@ async def something():
 
 LOGS.info("Bot has started.")
 with bot:
+    # Trigger the web server before entering the main bot loop tasks
+    bot.loop.run_until_complete(start_web_server())
     bot.loop.run_until_complete(startup())
     bot.loop.run_until_complete(something())
     bot.loop.run_forever()
